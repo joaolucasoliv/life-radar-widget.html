@@ -1,0 +1,232 @@
+<!--
+  Life Radar Widget — para incorporar no Notion via bloco /embed.
+  Tudo o que você precisa editar está no objeto CONFIG abaixo.
+  Arquivo único, sem dependências externas.
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Life Radar</title>
+
+<style>
+  :root {
+    --grid:        #e6e6e6;   /* anéis e raios do gráfico        */
+    --grid-strong: #dcdcdc;   /* anel externo                    */
+    --fill:        rgba(122,122,122,0.16); /* preenchimento área */
+    --stroke:      #8c8c8c;   /* contorno da área de dados       */
+    --dot:         #6b6b6b;   /* pontos nos vértices             */
+    --label:       #9a9a9a;   /* rótulos dos eixos               */
+    --scale:       #c4c4c4;   /* números 0–5                     */
+    --seg-on:      #4a4a4a;   /* segmento preenchido             */
+    --seg-off:     #d8d8d8;   /* segmento vazio                  */
+    --xp:          #707070;   /* texto de XP / nível             */
+    --icon:        #b5b5b5;   /* ícone de ajustes                */
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: transparent;
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .widget {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 8px 16px 20px;
+  }
+
+  .chart { width: 100%; height: auto; display: block; }
+
+  text { font-family: var(--font); }
+  .axis-label { fill: var(--label); font-size: 11px; letter-spacing: .2px; }
+  .scale-label { fill: var(--scale); font-size: 9px; }
+
+  /* ---- barras de progresso ---- */
+  .bars { margin-top: 18px; }
+
+  .bars-header {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 2px 10px;
+  }
+  .settings-icon { width: 16px; height: 16px; opacity: .9; }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 7px 0;
+  }
+  .segments { display: flex; gap: 4px; flex: 0 0 auto; }
+  .seg {
+    width: 9px;
+    height: 9px;
+    border-radius: 1px;
+    background: var(--seg-off);
+  }
+  .seg.on { background: var(--seg-on); }
+
+  .bar-meta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--xp);
+    white-space: nowrap;
+  }
+  .bar-meta .xp { color: #8c8c8c; }
+  .bar-meta .dot-sep { color: var(--seg-on); font-size: 8px; }
+  .bar-meta .lv { color: #6b6b6b; letter-spacing: .3px; }
+</style>
+
+<div class="widget">
+  <svg class="chart" viewBox="0 0 360 320" aria-label="Life radar chart"></svg>
+
+  <div class="bars">
+    <div class="bars-header">
+      <svg class="settings-icon" viewBox="0 0 24 24" fill="none"
+           stroke="var(--icon)" stroke-width="1.6" stroke-linecap="round">
+        <line x1="4" y1="8" x2="20" y2="8"/>
+        <circle cx="9" cy="8" r="2.4" fill="white"/>
+        <line x1="4" y1="16" x2="20" y2="16"/>
+        <circle cx="15" cy="16" r="2.4" fill="white"/>
+      </svg>
+    </div>
+    <div id="bar-list"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EDITE AQUI
+   ============================================================ */
+const CONFIG = {
+  max: 5,                         // valor máximo dos eixos
+  // ordem horária a partir do topo
+  axes: [
+    { label: "Creativity", value: 5   },
+    { label: "Financial",  value: 2   },
+    { label: "Health",     value: 5   },
+    { label: "Learning",   value: 0   },
+    { label: "Social",     value: 5   },
+    { label: "Writing",    value: 1.5 },
+  ],
+  bars: [
+    // 'filled'/'segments' controla o visual dos quadradinhos
+    { filled: 8, segments: 11, current: 1556, total: 1570, level: "LV5" },
+    { filled: 8, segments: 11, current: 607,  total: 638,  level: "LV2" },
+  ],
+};
+/* ============================================================ */
+
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.querySelector(".chart");
+  const cx = 180, cy = 150, R = 110;            // centro e raio do gráfico
+  const n = CONFIG.axes.length;
+  const max = CONFIG.max;
+
+  // ângulo de cada eixo: topo (-90°) seguindo no sentido horário
+  const angle = i => (-90 + i * (360 / n)) * Math.PI / 180;
+  const point = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+
+  const make = (tag, attrs) => {
+    const el = document.createElementNS(NS, tag);
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  };
+
+  // ---- anéis hexagonais (1..max) ----
+  for (let level = 1; level <= max; level++) {
+    const r = (R * level) / max;
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const [x, y] = point(i, r);
+      pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+    }
+    svg.appendChild(make("polygon", {
+      points: pts.join(" "),
+      fill: "none",
+      stroke: level === max ? "var(--grid-strong)" : "var(--grid)",
+      "stroke-width": 1,
+    }));
+  }
+
+  // ---- raios (spokes) ----
+  for (let i = 0; i < n; i++) {
+    const [x, y] = point(i, R);
+    svg.appendChild(make("line", {
+      x1: cx, y1: cy, x2: x.toFixed(2), y2: y.toFixed(2),
+      stroke: "var(--grid)", "stroke-width": 1,
+    }));
+  }
+
+  // ---- números 0..max ao longo do eixo superior ----
+  for (let level = 0; level <= max; level++) {
+    const r = (R * level) / max;
+    const t = make("text", {
+      x: cx + 7, y: cy - r + 3,
+      "text-anchor": "start", class: "scale-label",
+    });
+    t.textContent = level;
+    svg.appendChild(t);
+  }
+
+  // ---- área de dados ----
+  const dataPts = CONFIG.axes.map((a, i) => {
+    const r = (R * Math.max(0, Math.min(max, a.value))) / max;
+    return point(i, r);
+  });
+  svg.appendChild(make("polygon", {
+    points: dataPts.map(p => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" "),
+    fill: "var(--fill)", stroke: "var(--stroke)",
+    "stroke-width": 1.6, "stroke-linejoin": "round",
+  }));
+  dataPts.forEach(p => svg.appendChild(make("circle", {
+    cx: p[0].toFixed(2), cy: p[1].toFixed(2), r: 2.6, fill: "var(--dot)",
+  })));
+
+  // ---- rótulos dos eixos ----
+  CONFIG.axes.forEach((a, i) => {
+    const [x, y] = point(i, R + 22);
+    const ax = Math.cos(angle(i));
+    let anchor = "middle";
+    if (ax > 0.3) anchor = "start";
+    else if (ax < -0.3) anchor = "end";
+    const t = make("text", {
+      x: x.toFixed(2), y: (y + 3).toFixed(2),
+      "text-anchor": anchor, class: "axis-label",
+    });
+    t.textContent = a.label;
+    svg.appendChild(t);
+  });
+
+  // ---- barras de progresso ----
+  const list = document.getElementById("bar-list");
+  CONFIG.bars.forEach(b => {
+    const row = document.createElement("div");
+    row.className = "bar-row";
+
+    const segs = document.createElement("div");
+    segs.className = "segments";
+    for (let i = 0; i < b.segments; i++) {
+      const s = document.createElement("span");
+      s.className = "seg" + (i < b.filled ? " on" : "");
+      segs.appendChild(s);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "bar-meta";
+    meta.innerHTML =
+      `<span class="xp">${b.current} / ${b.total}</span>` +
+      `<span class="dot-sep">●</span>` +
+      `<span class="lv">${b.level}</span>`;
+
+    row.appendChild(segs);
+    row.appendChild(meta);
+    list.appendChild(row);
+  });
+})();
+</script>
