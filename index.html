@@ -78,6 +78,10 @@
     color: #606060;
   }
 
+  .theme-sun { display: none; }
+  :root[data-theme="dark"] .theme-moon { display: none; }
+  :root[data-theme="dark"] .theme-sun { display: block; }
+
   .chart {
     width: 100%;
     height: auto;
@@ -209,8 +213,34 @@
     color: #a0a0a0;
   }
 
+  :root[data-theme="dark"] {
+    --panel: rgba(32,32,32,.98);
+    --border: #3b3b3b;
+    --text: #d0d0d0;
+    --muted: #909090;
+    --grid: #3a3a3a;
+    --grid-strong: #4a4a4a;
+    --fill: rgba(190,190,190,.12);
+    --stroke: #aaa;
+    --dot: #bdbdbd;
+    --label: #9d9d9d;
+    --scale: #666;
+    --seg-on: #c2c2c2;
+    --seg-off: #4a4a4a;
+    --xp: #aaa;
+    --icon: #8f8f8f;
+    --button: #2f2f2f;
+    --button-hover: #383838;
+  }
+
+  :root[data-theme="dark"] .score-number {
+    background: #292929;
+    color: #d0d0d0;
+  }
+
+  /* Follow the OS only when the user hasn't picked a theme manually. */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme]) {
       --panel: rgba(32,32,32,.98);
       --border: #3b3b3b;
       --text: #d0d0d0;
@@ -230,7 +260,7 @@
       --button-hover: #383838;
     }
 
-    .score-number {
+    :root:not([data-theme]) .score-number {
       background: #292929;
       color: #d0d0d0;
     }
@@ -241,6 +271,24 @@
 <body>
 <div class="widget">
   <div class="topbar">
+    <button id="toggle-theme" class="icon-button" aria-label="Alternar modo noturno" title="Modo noturno">
+      <svg class="theme-icon theme-moon" width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+      <svg class="theme-icon theme-sun" width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <line x1="12" y1="2" x2="12" y2="4"/>
+        <line x1="12" y1="20" x2="12" y2="22"/>
+        <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/>
+        <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/>
+        <line x1="2" y1="12" x2="4" y2="12"/>
+        <line x1="20" y1="12" x2="22" y2="12"/>
+        <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/>
+        <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/>
+      </svg>
+    </button>
     <button id="toggle-editor" class="icon-button" aria-label="Editar Life Radar" title="Editar">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
@@ -288,7 +336,24 @@ const DEFAULT_CONFIG = {
 };
 
 const STORAGE_KEY = "life-radar-widget-v1";
+const THEME_KEY = "life-radar-theme-v1";
 let config = loadConfig();
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function initTheme() {
+  let theme = null;
+  try { theme = localStorage.getItem(THEME_KEY); } catch {}
+  if (theme !== "dark" && theme !== "light") {
+    theme = window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  applyTheme(theme);
+}
+
+initTheme();
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -510,6 +575,13 @@ function renderAll() {
   renderBars();
   renderEditor();
 }
+
+document.getElementById("toggle-theme").addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "dark"
+    ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+});
 
 document.getElementById("toggle-editor").addEventListener("click", () => {
   const editor = document.getElementById("editor");
