@@ -7,35 +7,54 @@
 
 <style>
   :root {
-    /* Neutral, theme-agnostic palette. Everything is transparent or a
-       mid-gray so the widget blends into whatever background Notion (or
-       any host) puts behind the embed — light or dark. */
-    --bg: transparent;
-    --panel: transparent;
-    --border: rgba(128,128,128,.32);
-    --text: #888888;
-    --muted: #8a8a8a;
-    --grid: rgba(128,128,128,.26);
-    --grid-strong: rgba(128,128,128,.45);
-    --fill: rgba(128,128,128,.18);
-    --stroke: rgba(128,128,128,.95);
-    --dot: #8a8a8a;
-    --label: #909090;
-    --scale: rgba(128,128,128,.6);
-    --seg-on: #8a8a8a;
-    --seg-off: rgba(128,128,128,.3);
-    --xp: #8a8a8a;
-    --icon: #8a8a8a;
-    --button: rgba(128,128,128,.14);
-    --button-hover: rgba(128,128,128,.24);
+    /* Light theme (default). The widget paints its own card so it covers
+       the white iframe backing Notion gives embeds. Switch to dark with
+       the toggle, or by adding ?theme=dark to the embed URL. */
+    --card: #ffffff;
+    --border: #e8e8e8;
+    --text: #595959;
+    --muted: #9a9a9a;
+    --grid: #e6e6e6;
+    --grid-strong: #dcdcdc;
+    --fill: rgba(122,122,122,0.16);
+    --stroke: #8c8c8c;
+    --dot: #6b6b6b;
+    --label: #8f8f8f;
+    --scale: #c4c4c4;
+    --seg-on: #4a4a4a;
+    --seg-off: #d8d8d8;
+    --xp: #707070;
+    --icon: #a8a8a8;
+    --button: #f5f5f5;
+    --button-hover: #ececec;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  :root[data-theme="dark"] {
+    --card: #1f1f1f;
+    --border: #3b3b3b;
+    --text: #d0d0d0;
+    --muted: #909090;
+    --grid: #3a3a3a;
+    --grid-strong: #4a4a4a;
+    --fill: rgba(190,190,190,.12);
+    --stroke: #aaa;
+    --dot: #bdbdbd;
+    --label: #9d9d9d;
+    --scale: #666;
+    --seg-on: #c2c2c2;
+    --seg-off: #4a4a4a;
+    --xp: #aaa;
+    --icon: #8f8f8f;
+    --button: #2f2f2f;
+    --button-hover: #383838;
   }
 
   * { box-sizing: border-box; }
 
   html, body {
     margin: 0;
-    background: var(--bg);
+    background: transparent;
     font-family: var(--font);
     -webkit-font-smoothing: antialiased;
     color: var(--text);
@@ -47,6 +66,8 @@
     width: min(100%, 440px);
     margin: 0 auto;
     padding: 8px 14px 18px;
+    background: var(--card);
+    border-radius: 14px;
   }
 
   .topbar {
@@ -74,6 +95,10 @@
     background: var(--button);
     color: #9a9a9a;
   }
+
+  .theme-sun { display: none; }
+  :root[data-theme="dark"] .theme-moon { display: none; }
+  :root[data-theme="dark"] .theme-sun { display: block; }
 
   .icon-button.active {
     background: var(--button);
@@ -135,7 +160,7 @@
     padding: 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: var(--panel);
+    background: transparent;
   }
 
   .editor.open { display: block; }
@@ -217,7 +242,25 @@
 <body>
 <div class="widget">
   <div class="topbar">
-    <button id="toggle-editor" class="icon-button" aria-label="Editar Life Radar" title="Editar">
+    <button id="toggle-theme" class="icon-button" type="button" aria-label="Alternar modo noturno" title="Modo noturno">
+      <svg class="theme-icon theme-moon" width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+      <svg class="theme-icon theme-sun" width="17" height="17" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <line x1="12" y1="2" x2="12" y2="4"/>
+        <line x1="12" y1="20" x2="12" y2="22"/>
+        <line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/>
+        <line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/>
+        <line x1="2" y1="12" x2="4" y2="12"/>
+        <line x1="20" y1="12" x2="22" y2="12"/>
+        <line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/>
+        <line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/>
+      </svg>
+    </button>
+    <button id="toggle-editor" class="icon-button" type="button" aria-label="Editar Life Radar" title="Editar">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
         <line x1="4" y1="8" x2="20" y2="8"/>
@@ -264,7 +307,32 @@ const DEFAULT_CONFIG = {
 };
 
 const STORAGE_KEY = "life-radar-widget-v1";
+const THEME_KEY = "life-radar-theme-v1";
 let config = loadConfig();
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+}
+
+function initTheme() {
+  // Priority: ?theme= in the embed URL (handy for Notion, which can't tell
+  // the widget its theme) > saved choice > OS preference.
+  let theme = null;
+  try {
+    const param = new URLSearchParams(location.search).get("theme");
+    if (param === "dark" || param === "light") theme = param;
+  } catch {}
+  if (!theme) {
+    try { theme = localStorage.getItem(THEME_KEY); } catch {}
+  }
+  if (theme !== "dark" && theme !== "light") {
+    theme = window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  applyTheme(theme);
+}
+
+initTheme();
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -486,6 +554,13 @@ function renderAll() {
   renderBars();
   renderEditor();
 }
+
+document.getElementById("toggle-theme").addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "dark"
+    ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+});
 
 document.getElementById("toggle-editor").addEventListener("click", () => {
   const editor = document.getElementById("editor");
