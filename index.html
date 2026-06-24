@@ -7,9 +7,9 @@
 
 <style>
   :root {
-    /* Light theme (default). The widget paints its own card so it covers
-       the white iframe backing Notion gives embeds. Switch to dark with
-       the toggle, or by adding ?theme=dark to the embed URL. */
+    /* Light theme (default). --card fills the whole iframe to match the host
+       page's background (Notion light = #ffffff). Auto-follows the OS theme;
+       override with the toggle or ?theme=dark in the embed URL. */
     --card: #ffffff;
     --border: #e8e8e8;
     --text: #595959;
@@ -31,7 +31,7 @@
   }
 
   :root[data-theme="dark"] {
-    --card: #1f1f1f;
+    --card: #191919; /* exact Notion dark-mode page background */
     --border: #3b3b3b;
     --text: #d0d0d0;
     --muted: #909090;
@@ -52,9 +52,14 @@
 
   * { box-sizing: border-box; }
 
+  /* Paint the WHOLE iframe with the matched color. A Notion embed renders any
+     uncovered area as opaque white (not Notion's page) — so the only way to
+     look "background-less" is to fill the entire frame with Notion's exact
+     color. min-height covers the case where the embed is taller than content. */
   html, body {
     margin: 0;
-    background: transparent;
+    min-height: 100vh;
+    background: var(--card);
     font-family: var(--font);
     -webkit-font-smoothing: antialiased;
     color: var(--text);
@@ -66,8 +71,7 @@
     width: min(100%, 440px);
     margin: 0 auto;
     padding: 8px 14px 18px;
-    background: var(--card);
-    border-radius: 14px;
+    background: transparent;
   }
 
   .topbar {
