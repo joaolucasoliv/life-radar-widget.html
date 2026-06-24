@@ -310,13 +310,23 @@ const STORAGE_KEY = "life-radar-widget-v1";
 const THEME_KEY = "life-radar-theme-v1";
 let config = loadConfig();
 
+// True while the theme is being driven by the OS (no explicit user/URL choice),
+// so we can keep following the OS live as it flips light/dark.
+let followingOS = false;
+
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
 
+function osPrefersDark() {
+  return !!(window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
 function initTheme() {
-  // Priority: ?theme= in the embed URL (handy for Notion, which can't tell
-  // the widget its theme) > saved choice > OS preference.
+  // A cross-origin Notion embed CANNOT read Notion's own light/dark setting,
+  // so the order is: ?theme= in the embed URL (explicit override) > a choice
+  // saved via the toggle > the OS theme (the only signal available to us).
   let theme = null;
   try {
     const param = new URLSearchParams(location.search).get("theme");
@@ -326,13 +336,21 @@ function initTheme() {
     try { theme = localStorage.getItem(THEME_KEY); } catch {}
   }
   if (theme !== "dark" && theme !== "light") {
-    theme = window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    followingOS = true;
+    theme = osPrefersDark() ? "dark" : "light";
   }
   applyTheme(theme);
 }
 
 initTheme();
+
+// Live-follow the OS theme: if the user flips their system to dark/light (and
+// Notion is set to "Use system setting"), the widget updates without re-embedding.
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
+    if (followingOS) applyTheme(e.matches ? "dark" : "light");
+  });
+}
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -558,6 +576,7 @@ function renderAll() {
 document.getElementById("toggle-theme").addEventListener("click", () => {
   const next = document.documentElement.getAttribute("data-theme") === "dark"
     ? "light" : "dark";
+  followingOS = false; // user made an explicit choice; stop tracking the OS
   applyTheme(next);
   try { localStorage.setItem(THEME_KEY, next); } catch {}
 });
