@@ -3,13 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Life Radar</title>
+<title>Life Radar to Notion</title>
 
 <style>
   :root {
-    /* Light theme (default). --card fills the whole iframe to match the host
-       page's background (Notion light = #ffffff). Auto-follows the OS theme;
-       override with the toggle or ?theme=dark in the embed URL. */
+    /* for the light theme, the default Notion background is #ffffff, but we use a slightly darker card color to make the chart stand out more */
     --card: #ffffff;
     --border: #e8e8e8;
     --text: #595959;
@@ -52,10 +50,6 @@
 
   * { box-sizing: border-box; }
 
-  /* Paint the WHOLE iframe with the matched color. A Notion embed renders any
-     uncovered area as opaque white (not Notion's page) — so the only way to
-     look "background-less" is to fill the entire frame with Notion's exact
-     color. min-height covers the case where the embed is taller than content. */
   html, body {
     margin: 0;
     min-height: 100vh;
